@@ -3,6 +3,7 @@
 namespace OneBitSoftware.InputLanguageScreamer.Desktop;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Media;
@@ -18,6 +19,7 @@ public class LanguageAudioPlayer
     private readonly string audioDirectory;
     private IWavePlayer? wavePlayer;
     private AudioFileReader? audioFileReader;
+    private readonly Dictionary<string, string> audioFileCache;
 
     /// <summary>
     /// Initializes the audio player with the specified audio directory
@@ -26,6 +28,31 @@ public class LanguageAudioPlayer
     public LanguageAudioPlayer(string audioDirectory)
     {
         this.audioDirectory = audioDirectory;
+        this.audioFileCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        CacheAudioFiles();
+    }
+    
+    /// <summary>
+    /// Caches all available audio files at startup to avoid disk operations during language changes
+    /// </summary>
+    private void CacheAudioFiles()
+    {
+        try
+        {
+            if (Directory.Exists(audioDirectory))
+            {
+                var audioFiles = Directory.GetFiles(audioDirectory, "*.mp3");
+                foreach (var file in audioFiles)
+                {
+                    var languageName = Path.GetFileNameWithoutExtension(file);
+                    audioFileCache[languageName] = file;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Silently handle any errors during caching
+        }
     }
 
     /// <summary>
@@ -73,12 +100,18 @@ public class LanguageAudioPlayer
     {
         // Extract language name from culture info
         var cultureName = language.Culture.EnglishName;
+        var layoutName = language.LayoutName;
         
-        // Handle common language mappings
+        // Debug info - can be removed after fixing
+        Console.WriteLine($"Culture: {cultureName}, Layout: {layoutName}, LCID: {language.Culture.LCID}");
+        
+        // Handle Bulgarian specifically - check both culture name and layout
+        if (cultureName.Contains("Bulgarian") || layoutName.Contains("Bulgarian"))
+            return "Bulgarian";
+            
+        // Handle English
         if (cultureName.Contains("English"))
             return "English";
-        if (cultureName.Contains("Bulgarian"))
-            return "Bulgarian";
         
         // For other languages, try to extract the first word
         var firstWord = cultureName.Split(' ')[0];
@@ -92,16 +125,13 @@ public class LanguageAudioPlayer
     /// <returns>Path to the audio file, or null if not found</returns>
     private string? FindAudioFileForLanguage(string languageName)
     {
-        // Try exact match first
-        var exactMatch = Path.Combine(audioDirectory, $"{languageName}.mp3");
-        if (File.Exists(exactMatch))
-            return exactMatch;
-
-        // Try case-insensitive search
-        var audioFiles = Directory.GetFiles(audioDirectory, "*.mp3");
-        return audioFiles.FirstOrDefault(file => 
-            Path.GetFileNameWithoutExtension(file)
-                .Equals(languageName, StringComparison.OrdinalIgnoreCase));
+        // Use the cached audio file if available
+        if (audioFileCache.TryGetValue(languageName, out var audioFile))
+        {
+            return audioFile;
+        }
+        
+        return null;
     }
 
     /// <summary>

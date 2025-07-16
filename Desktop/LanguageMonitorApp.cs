@@ -52,12 +52,6 @@ public class LanguageMonitorApp : ApplicationContext
         contextMenu.Items.Add(exitItem);
         
         notifyIcon.ContextMenuStrip = contextMenu;
-
-        // Show notification when app starts
-        notifyIcon.ShowBalloonTip(3000, 
-            "Input Language Screamer Started", 
-            "Language-specific audio monitoring is now active. MP3 files will play when switching languages.", 
-            ToolTipIcon.Info);
     }
 
     /// <summary>
