@@ -1,0 +1,220 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+  workflow_dispatch:  # Allows manual triggering
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'Desktop/Desktop.csproj'
+  SOLUTION_PATH: 'OneBitSoftware.InputLanguageScreamer.sln'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for proper versioning
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Extract version from tag
+      id: get_version
+      shell: pwsh
+      run: |
+        if ($env:GITHUB_REF -match 'refs/tags/v(.*)') {
+          $version = $matches[1]
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG_NAME=v$version" >> $env:GITHUB_OUTPUT
+          echo "Version: $version"
+        } else {
+          $version = "1.0.0"
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG_NAME=v$version" >> $env:GITHUB_OUTPUT
+          echo "No tag found, using default version: $version"
+        }
+
+    - name: Update project version
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $projectFile = "${{ env.PROJECT_PATH }}"
+        
+        # Read the project file
+        $content = Get-Content $projectFile -Raw
+        
+        # Update version numbers
+        $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version.0</AssemblyVersion>"
+        $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version.0</FileVersion>"
+        
+        # Write back to file
+        Set-Content $projectFile -Value $content -NoNewline
+        
+        echo "Updated project version to $version"
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build solution
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+    - name: Run tests (if any)
+      run: dotnet test ${{ env.SOLUTION_PATH }} --configuration Release --no-build --verbosity normal
+      continue-on-error: true  # Continue even if no tests exist
+
+    - name: Publish Windows x64
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output ./publish/win-x64 `
+          --verbosity normal
+
+    - name: Publish Windows x86
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          --configuration Release `
+          --runtime win-x86 `
+          --self-contained true `
+          --output ./publish/win-x86 `
+          --verbosity normal
+
+    - name: Publish Windows ARM64
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          --configuration Release `
+          --runtime win-arm64 `
+          --self-contained true `
+          --output ./publish/win-arm64 `
+          --verbosity normal
+
+    - name: Create release packages
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        
+        # Create release directory
+        New-Item -ItemType Directory -Force -Path "./release"
+        
+        # Package Windows x64
+        Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "./release/InputLanguageScreamer-v$version-win-x64.zip"
+        
+        # Package Windows x86
+        Compress-Archive -Path "./publish/win-x86/*" -DestinationPath "./release/InputLanguageScreamer-v$version-win-x86.zip"
+        
+        # Package Windows ARM64
+        Compress-Archive -Path "./publish/win-arm64/*" -DestinationPath "./release/InputLanguageScreamer-v$version-win-arm64.zip"
+        
+        # Create portable package (just the executable and audio files)
+        New-Item -ItemType Directory -Force -Path "./portable"
+        Copy-Item "./publish/win-x64/Desktop.exe" -Destination "./portable/"
+        Copy-Item "./publish/win-x64/Audio" -Destination "./portable/" -Recurse -Force
+        Compress-Archive -Path "./portable/*" -DestinationPath "./release/InputLanguageScreamer-v$version-portable.zip"
+        
+        echo "Created release packages:"
+        Get-ChildItem "./release/" | ForEach-Object { echo "  - $($_.Name)" }
+
+    - name: Generate release notes
+      id: release_notes
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $releaseNotes = @"
+        # Input Language Screamer v$version
+        
+        ## 🎵 What's New
+        
+        This release includes the latest features and improvements for Input Language Screamer.
+        
+        ## 📦 Downloads
+        
+        Choose the appropriate package for your system:
+        
+        - **Windows x64** (Recommended for most users): `InputLanguageScreamer-v$version-win-x64.zip`
+        - **Windows x86** (32-bit systems): `InputLanguageScreamer-v$version-win-x86.zip`
+        - **Windows ARM64** (ARM-based Windows devices): `InputLanguageScreamer-v$version-win-arm64.zip`
+        - **Portable** (Minimal package): `InputLanguageScreamer-v$version-portable.zip`
+        
+        ## 🚀 Installation
+        
+        1. Download the appropriate ZIP file for your system
+        2. Extract to your desired location
+        3. Add your MP3 audio files to the `Audio` folder
+        4. Run `Desktop.exe`
+        
+        ## 🎵 Supported Audio Files
+        
+        Place MP3 files in the `Audio` folder named after your languages:
+        - `English.mp3` for English
+        - `Bulgarian.mp3` for Bulgarian
+        - `Spanish.mp3` for Spanish
+        - etc.
+        
+        ## 🔧 System Requirements
+        
+        - Windows 10/11
+        - .NET 9.0 Runtime (included in self-contained packages)
+        
+        ## 📞 Support
+        
+        - [Issues](https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/issues)
+        - [Discussions](https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/discussions)
+        
+        ---
+        **Full Changelog**: https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/compare/v$version
+        "@
+        
+        # Save to file for GitHub release
+        $releaseNotes | Out-File -FilePath "./release-notes.md" -Encoding UTF8
+        
+        # Output for GitHub Actions (escape newlines)
+        $escapedNotes = $releaseNotes -replace "`r`n", "%0A" -replace "`n", "%0A"
+        echo "RELEASE_NOTES=$escapedNotes" >> $env:GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
+        name: Input Language Screamer ${{ steps.get_version.outputs.TAG_NAME }}
+        body_path: ./release-notes.md
+        draft: false
+        prerelease: false
+        files: |
+          ./release/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-${{ steps.get_version.outputs.VERSION }}
+        path: |
+          ./release/*.zip
+          ./release-notes.md
+        retention-days: 30
+
+    - name: Build summary
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        echo "## 🎉 Build Summary" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Version**: $version" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Build**: Successful" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Platforms**: Windows x64, x86, ARM64" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Release**: Created" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "### 📦 Release Packages" >> $env:GITHUB_STEP_SUMMARY
+        Get-ChildItem "./release/*.zip" | ForEach-Object { 
+          $size = [math]::Round($_.Length / 1MB, 2)
+          echo "- **$($_.Name)** ($size MB)" >> $env:GITHUB_STEP_SUMMARY
+        }

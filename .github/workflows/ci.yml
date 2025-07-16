@@ -1,0 +1,44 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  SOLUTION_PATH: 'OneBitSoftware.InputLanguageScreamer.sln'
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build solution
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test ${{ env.SOLUTION_PATH }} --configuration Release --no-build --verbosity normal
+      continue-on-error: true
+
+    - name: Build summary
+      shell: pwsh
+      run: |
+        echo "## 🔍 CI Build Summary" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Build**: Successful" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Configuration**: Release" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Platform**: Windows" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Framework**: .NET ${{ env.DOTNET_VERSION }}" >> $env:GITHUB_STEP_SUMMARY

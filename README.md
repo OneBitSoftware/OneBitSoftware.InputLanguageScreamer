@@ -7,6 +7,8 @@ NOTE: Automatically build with Claude Sonnet 4.0
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Build](https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/actions/workflows/ci.yml/badge.svg)](https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/actions/workflows/ci.yml)
+[![Release](https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/actions/workflows/build-and-release.yml)
 
 ## 🚀 Features
 
@@ -50,9 +52,14 @@ OneBitSoftware.InputLanguageScreamer/
 
 ### Option 1: Download Release (Recommended)
 1. Download the latest release from the [Releases](../../releases) page
-2. Extract the ZIP file to your desired location
-3. Add your MP3 audio files to the `Audio` folder
-4. Run `Desktop.exe`
+2. Choose the appropriate package for your system:
+   - **Windows x64** (Recommended): `InputLanguageScreamer-vX.X.X-win-x64.zip`
+   - **Windows x86** (32-bit): `InputLanguageScreamer-vX.X.X-win-x86.zip`
+   - **Windows ARM64**: `InputLanguageScreamer-vX.X.X-win-arm64.zip`
+   - **Portable** (Minimal): `InputLanguageScreamer-vX.X.X-portable.zip`
+3. Extract the ZIP file to your desired location
+4. Add your MP3 audio files to the `Audio` folder
+5. Run `Desktop.exe`
 
 ### Option 2: Build from Source
 ```bash
@@ -66,6 +73,21 @@ dotnet build --configuration Release
 # Publish as single executable
 dotnet publish Desktop/Desktop.csproj --configuration Release --output ./publish
 ```
+
+## 🚀 Automated Releases
+
+This project uses GitHub Actions for automated building and releasing:
+
+### Creating a New Release
+1. **Tag a new version**: `git tag v1.0.1 && git push origin v1.0.1`
+2. **Automatic build**: GitHub Actions will automatically build for all platforms
+3. **Release creation**: A new GitHub release will be created with all packages
+4. **Multi-platform support**: Builds for Windows x64, x86, and ARM64
+
+### Continuous Integration
+- **Every push/PR**: Automatic build verification
+- **Quality checks**: Code builds successfully on Windows
+- **Status badges**: Build status visible in README
 
 ## 🎵 Adding Audio Files
 

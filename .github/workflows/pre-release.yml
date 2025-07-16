@@ -1,0 +1,189 @@
+name: Pre-Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*-*'  # Triggers on pre-release tags like v1.0.0-beta, v1.0.0-alpha, etc.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Pre-release version (e.g., 1.0.0-beta)'
+        required: true
+        default: '1.0.0-beta'
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'Desktop/Desktop.csproj'
+  SOLUTION_PATH: 'OneBitSoftware.InputLanguageScreamer.sln'
+
+jobs:
+  pre-release:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Extract version from tag or input
+      id: get_version
+      shell: pwsh
+      run: |
+        if ($env:GITHUB_REF -match 'refs/tags/v(.*)') {
+          $version = $matches[1]
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG_NAME=v$version" >> $env:GITHUB_OUTPUT
+          echo "Pre-release version from tag: $version"
+        } elseif ("${{ github.event.inputs.version }}" -ne "") {
+          $version = "${{ github.event.inputs.version }}"
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG_NAME=v$version" >> $env:GITHUB_OUTPUT
+          echo "Pre-release version from input: $version"
+        } else {
+          $version = "1.0.0-beta"
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG_NAME=v$version" >> $env:GITHUB_OUTPUT
+          echo "Default pre-release version: $version"
+        }
+
+    - name: Update project version
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $projectFile = "${{ env.PROJECT_PATH }}"
+        
+        # Read the project file
+        $content = Get-Content $projectFile -Raw
+        
+        # For pre-release, use the full version string
+        $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version</AssemblyVersion>"
+        $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version</FileVersion>"
+        
+        # Write back to file
+        Set-Content $projectFile -Value $content -NoNewline
+        
+        echo "Updated project version to $version"
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+    - name: Build solution
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+    - name: Publish Windows x64
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output ./publish/win-x64 `
+          --verbosity normal
+
+    - name: Create pre-release package
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        
+        # Create release directory
+        New-Item -ItemType Directory -Force -Path "./pre-release"
+        
+        # Package Windows x64 (main pre-release package)
+        Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "./pre-release/InputLanguageScreamer-v$version-win-x64.zip"
+        
+        echo "Created pre-release package: InputLanguageScreamer-v$version-win-x64.zip"
+
+    - name: Generate pre-release notes
+      id: release_notes
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $releaseNotes = @"
+        # 🧪 Input Language Screamer v$version (Pre-Release)
+        
+        > ⚠️ **This is a pre-release version** - Use for testing purposes only
+        
+        ## 🎵 What's New in This Pre-Release
+        
+        This pre-release includes the latest development features and improvements. Please test thoroughly before using in production.
+        
+        ## 📦 Download
+        
+        - **Windows x64 (Pre-Release)**: `InputLanguageScreamer-v$version-win-x64.zip`
+        
+        ## 🧪 Testing Instructions
+        
+        1. Download and extract the ZIP file
+        2. Add your MP3 audio files to the `Audio` folder
+        3. Run `Desktop.exe`
+        4. Test language switching with Alt+Shift
+        5. Report any issues on GitHub
+        
+        ## 🐛 Known Issues
+        
+        - This is a development build - expect potential bugs
+        - Please report issues at: https://github.com/OneBitSoftware/OneBitSoftware.InputLanguageScreamer/issues
+        
+        ## 🔧 System Requirements
+        
+        - Windows 10/11
+        - .NET 9.0 Runtime (included)
+        
+        ## 📞 Feedback
+        
+        Your feedback is valuable! Please:
+        - Test the application thoroughly
+        - Report bugs via GitHub Issues
+        - Share your experience in Discussions
+        
+        ---
+        **⚠️ Pre-Release Notice**: This version is for testing only. For stable releases, use the latest non-pre-release version.
+        "@
+        
+        # Save to file for GitHub release
+        $releaseNotes | Out-File -FilePath "./pre-release-notes.md" -Encoding UTF8
+
+    - name: Create GitHub Pre-Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
+        name: Input Language Screamer ${{ steps.get_version.outputs.TAG_NAME }} (Pre-Release)
+        body_path: ./pre-release-notes.md
+        draft: false
+        prerelease: true  # Mark as pre-release
+        files: |
+          ./pre-release/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload pre-release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: pre-release-artifacts-${{ steps.get_version.outputs.VERSION }}
+        path: |
+          ./pre-release/*.zip
+          ./pre-release-notes.md
+        retention-days: 30
+
+    - name: Pre-release summary
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        echo "## 🧪 Pre-Release Summary" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Version**: $version" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Type**: Pre-Release" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Build**: Successful" >> $env:GITHUB_STEP_SUMMARY
+        echo "✅ **Platform**: Windows x64" >> $env:GITHUB_STEP_SUMMARY
+        echo "⚠️ **Status**: Testing Required" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "### 📦 Pre-Release Package" >> $env:GITHUB_STEP_SUMMARY
+        Get-ChildItem "./pre-release/*.zip" | ForEach-Object { 
+          $size = [math]::Round($_.Length / 1MB, 2)
+          echo "- **$($_.Name)** ($size MB)" >> $env:GITHUB_STEP_SUMMARY
+        }
