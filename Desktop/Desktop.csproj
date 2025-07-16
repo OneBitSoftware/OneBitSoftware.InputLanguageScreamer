@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    
+    <!-- Application Metadata -->
+    <AssemblyTitle>Input Language Screamer</AssemblyTitle>
+    <Product>Input Language Screamer</Product>
+    <Description>Plays language-specific MP3 audio files when Windows input language changes using Alt+Shift</Description>
+    <Copyright>© 2025 OneBit Software</Copyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    
+    <!-- Publishing Configuration -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Trimming disabled for Windows Forms compatibility -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MP3 playback support -->
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    
+    <!-- Include audio files in output -->
+    <Content Include="Audio\*.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
