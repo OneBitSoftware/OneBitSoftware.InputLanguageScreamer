@@ -2,6 +2,8 @@
 
 **A Windows application that plays language-specific audio files when you switch input languages using Alt+Shift.**
 
+NOTE: Automatically build with Claude Sonnet 4.0
+
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -170,7 +172,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](../../issues)
 - **Discussions**: [GitHub Discussions](../../discussions)
-- **Email**: support@onebitsoftware.com
 
 ## 🔄 Changelog
 
