@@ -56,19 +56,18 @@ public class LanguageAudioPlayer
     }
 
     /// <summary>
-    /// Plays the appropriate audio file for the current input language
+    /// Plays the appropriate audio file for the specified language
     /// Maps language names to corresponding MP3 files
     /// </summary>
-    public void PlayLanguageAudio()
+    /// <param name="languageName">Name of the language to play audio for</param>
+    public void PlayLanguageAudio(string languageName)
     {
         try
         {
             // Stop any currently playing audio
             StopCurrentAudio();
 
-            // Get current input language
-            var currentLanguage = InputLanguage.CurrentInputLanguage;
-            var languageName = GetLanguageDisplayName(currentLanguage);
+            Console.WriteLine($"Playing audio for language: {languageName}");
             
             // Try to find matching audio file
             var audioFile = FindAudioFileForLanguage(languageName);
@@ -80,9 +79,31 @@ public class LanguageAudioPlayer
             }
             else
             {
+                Console.WriteLine($"No audio file found for language: {languageName}");
                 // Fallback to system beep if no audio file found
                 SystemSounds.Beep.Play();
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error playing audio: {ex.Message}");
+            // Fallback to system beep on any error
+            SystemSounds.Beep.Play();
+        }
+    }
+
+    /// <summary>
+    /// Plays the appropriate audio file for the current input language (legacy method)
+    /// Maps language names to corresponding MP3 files
+    /// </summary>
+    public void PlayLanguageAudio()
+    {
+        try
+        {
+            // Get current input language
+            var currentLanguage = InputLanguage.CurrentInputLanguage;
+            var languageName = GetLanguageDisplayName(currentLanguage);
+            PlayLanguageAudio(languageName);
         }
         catch (Exception)
         {
@@ -150,7 +171,17 @@ public class LanguageAudioPlayer
         // Handle playback completion
         wavePlayer.PlaybackStopped += (sender, e) =>
         {
-            StopCurrentAudio();
+            // Only dispose resources, don't call StopCurrentAudio to avoid recursion
+            try
+            {
+                audioFileReader?.Dispose();
+                audioFileReader = null;
+            }
+            catch
+            {
+                // Ignore disposal errors
+                audioFileReader = null;
+            }
         };
         
         // Start playback
@@ -162,11 +193,34 @@ public class LanguageAudioPlayer
     /// </summary>
     private void StopCurrentAudio()
     {
-        wavePlayer?.Stop();
-        wavePlayer?.Dispose();
-        audioFileReader?.Dispose();
-        wavePlayer = null;
-        audioFileReader = null;
+        try
+        {
+            if (wavePlayer != null)
+            {
+                wavePlayer.Stop();
+                wavePlayer.Dispose();
+                wavePlayer = null;
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+            wavePlayer = null;
+        }
+
+        try
+        {
+            if (audioFileReader != null)
+            {
+                audioFileReader.Dispose();
+                audioFileReader = null;
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+            audioFileReader = null;
+        }
     }
 
     /// <summary>

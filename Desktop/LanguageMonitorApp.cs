@@ -64,10 +64,10 @@ public class LanguageMonitorApp : ApplicationContext
         audioPlayer = new LanguageAudioPlayer(audioDirectory);
         
         // Set up keyboard hook to play language-specific audio on language change
-        keyboardHook = new GlobalKeyboardHook(() =>
+        keyboardHook = new GlobalKeyboardHook((languageName) =>
         {
             // Play language-specific MP3 audio when language changes
-            audioPlayer.PlayLanguageAudio();
+            audioPlayer.PlayLanguageAudio(languageName);
         });
     }
 

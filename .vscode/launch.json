@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Desktop App",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/Desktop/bin/Debug/net9.0-windows/Desktop.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/Desktop",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "preLaunchTask": "build"
+        }
+    ]
+}
