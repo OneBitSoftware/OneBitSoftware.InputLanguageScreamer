@@ -12,8 +12,8 @@
     <Product>Input Language Screamer</Product>
     <Description>Plays language-specific MP3 audio files when Windows input language changes using Alt+Shift</Description>
     <Copyright>© 2025 OneBit Software</Copyright>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.0.0</FileVersion>
+    <AssemblyVersion>1.3.0.0</AssemblyVersion>
+    <FileVersion>1.3.0.0</FileVersion>
     
     <!-- Publishing Configuration -->
     <PublishSingleFile>true</PublishSingleFile>
