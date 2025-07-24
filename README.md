@@ -2,7 +2,7 @@
 
 **A Windows application that plays language-specific audio files when you switch input languages using Alt+Shift.**
 
-NOTE: Automatically build with Claude Sonnet 4.0
+NOTE: Automatically built with Claude Sonnet 4.0, no real coding.
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/)
 [![Windows](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
